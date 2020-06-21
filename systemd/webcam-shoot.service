@@ -1,0 +1,10 @@
+[Unit]
+Description=Webcam shoot and store
+
+[Service]
+User=knockside
+Group=knockside
+ExecStart=/home/knockside/webcam/shoot
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,131 @@
+#! /bin/sh
+
+WEBP_QUALITY=85
+JPEG_QUALITY=75
+
+SCRIPT_DIR="$(dirname "$0")"
+IMAGE_PREFIX=knockside
+MASTERS="$SCRIPT_DIR/masters"
+COMPRESSED="$SCRIPT_DIR/compressed"
+
+UPLOAD_BUCKET=knockside.scot
+UPLOAD_MASTERS_TARGET="s3://$UPLOAD_BUCKET/webcam/masters"
+UPLOAD_COMPRESSED_TARGET="s3://$UPLOAD_BUCKET/webcam/compressed"
+
+set -e
+
+now=$(date +%s)
+
+shoot ()
+{
+    ffmpeg -f v4l2 \
+           -s 1920x1080 \
+           -i /dev/video0 \
+	   -ss 00:00:02 \
+           -frames 1 \
+           -lossless 1 \
+           "$MASTERS"/"$IMAGE_PREFIX"-$now.webp
+}
+
+compress ()
+{
+    find "$MASTERS" \
+         -type f \
+         \( -name '*.png' \
+            -o -name '*.webp' \) \
+         | while read -r master
+    do
+        basename="$(basename "$master" | sed -e 's/\..\+//')"
+        if ! [ -f "$COMPRESSED"/"$basename".webp ]
+        then
+            convert "$master" \
+                    -quality "$WEBP_QUALITY" \
+                    "$COMPRESSED"/"$basename".webp
+        fi
+
+        if ! [ -f "$COMPRESSED"/"$basename".jpg ]
+        then
+            convert "$master" \
+                    -quality "$JPEG_QUALITY" \
+                    "$COMPRESSED"/"$basename".jpg
+        fi
+    done
+}
+
+generate_manifest ()
+{
+    find "$1" \
+         -type f \
+         \( -name '*.jpg' \
+            -o -name '*.png' \
+            -o -name '*.webp' \) \
+         -print0 \
+         | xargs -0 -n 1 basename \
+         | sed -e 's/^'"$IMAGE_PREFIX"'-//;s/\..\+//' \
+         | sort \
+         | uniq \
+         | awk '
+    BEGIN {
+        printf "[";
+    }
+
+    NR > 1 {
+        printf ",";
+    }
+
+    {
+        printf "\"%s\"", $1;
+    }
+
+    END {
+        printf "]\n";
+    }
+    ' >"$1/manifest.json"
+}
+
+upload ()
+{
+    if [ "$1" = "masters" ]
+    then
+        source="$MASTERS"
+        target="$UPLOAD_MASTERS_TARGET"
+    else
+        source="$COMPRESSED"
+        target="$UPLOAD_COMPRESSED_TARGET"
+    fi
+    aws s3 sync "$source" "$target"
+    aws s3 cp "$source"/manifest.json "$target"/ --cache-control "max-age=60"
+}
+
+main ()
+{
+    if [ $# -ge 1 ]
+    then
+        case "$1" in
+        "shoot")
+            shoot
+            ;;
+        "compress")
+            compress
+            ;;
+        "manifest")
+            generate_manifest "$MASTERS"
+            generate_manifest "$COMPRESSED"
+            ;;
+        "upload")
+            upload
+            ;;
+        "upload_masters")
+            upload masters
+            ;;
+        esac
+    else
+        shoot
+        compress
+        generate_manifest "$MASTERS"
+        generate_manifest "$COMPRESSED"
+        upload
+    fi
+}
+
+main "$@"
