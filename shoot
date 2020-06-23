@@ -21,7 +21,7 @@ shoot ()
     ffmpeg -f v4l2 \
            -s 1920x1080 \
            -i /dev/video0 \
-	   -ss 00:00:02 \
+	   -ss 00:00:04 \
            -frames 1 \
            -lossless 1 \
            "$MASTERS"/"$IMAGE_PREFIX"-$now.webp
