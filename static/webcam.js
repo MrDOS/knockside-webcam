@@ -8,7 +8,8 @@ function loadLatestWebcamImage() {
     req.addEventListener('load', function () {
         var images = JSON.parse(this.response);
         var latestImage = images[images.length - 1];
-        var backgroundImage = 'url("' + COMPRESSED_PATH + '/' + SITE_NAME.toLowerCase() + '-' + latestImage + '.' + DISPLAY_FORMAT + '")';
+        var latestImageDay = Math.floor(parseInt(latestImage) / 86400) * 86400;
+        var backgroundImage = 'url("' + COMPRESSED_PATH + '/' + latestImageDay + '/' + SITE_NAME.toLowerCase() + '-' + latestImage + '.' + DISPLAY_FORMAT + '")';
         if (document.documentElement.style.backgroundImage != backgroundImage) {
             document.documentElement.style.backgroundImage = backgroundImage;
             document.getElementById('when').innerHTML = new Date(parseInt(latestImage) * 1000);

@@ -18,13 +18,16 @@ now=$(date +%s)
 
 shoot ()
 {
+    day="$(expr $now / 86400 '*' 86400)"
+    mkdir -p "$MASTERS"/"$day"
+
     ffmpeg -f v4l2 \
            -s 1920x1080 \
            -i /dev/video0 \
 	   -ss 00:00:04 \
            -frames 1 \
            -lossless 1 \
-           "$MASTERS"/"$IMAGE_PREFIX"-$now.webp
+           "$MASTERS"/"$day"/"$IMAGE_PREFIX"-$now.webp
 }
 
 compress ()
@@ -36,18 +39,24 @@ compress ()
          | while read -r master
     do
         basename="$(basename "$master" | sed -e 's/\..\+//')"
-        if ! [ -f "$COMPRESSED"/"$basename".webp ]
+        time="$(echo "$basename" | sed -e 's/^.*-//')"
+        day="$(expr $time / 86400 '*' 86400)"
+        mkdir -p "$COMPRESSED"/"$day"
+
+        if ! [ -f "$COMPRESSED"/"$day"/"$basename".webp ]
         then
+            echo "Compressing $COMPRESSED/$day/$basename.webp..."
             convert "$master" \
                     -quality "$WEBP_QUALITY" \
-                    "$COMPRESSED"/"$basename".webp
+                    "$COMPRESSED"/"$day"/"$basename".webp
         fi
 
-        if ! [ -f "$COMPRESSED"/"$basename".jpg ]
+        if ! [ -f "$COMPRESSED"/"$day"/"$basename".jpg ]
         then
+            echo "Compressing $COMPRESSED/$day/$basename.jpg..."
             convert "$master" \
                     -quality "$JPEG_QUALITY" \
-                    "$COMPRESSED"/"$basename".jpg
+                    "$COMPRESSED"/"$day"/"$basename".jpg
         fi
     done
 }
@@ -93,7 +102,14 @@ upload ()
         source="$COMPRESSED"
         target="$UPLOAD_COMPRESSED_TARGET"
     fi
-    aws s3 sync "$source" "$target"
+
+    for day_source in "$source"/*/
+    do
+        day="$(basename "$day_source")"
+        echo "Synching $day_source to $target/$day..."
+        aws s3 sync "$day_source" "$target"/"$day"
+    done
+
     aws s3 cp "$source"/manifest.json "$target"/ --cache-control "max-age=60"
 }
 
