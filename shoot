@@ -1,16 +1,13 @@
 #! /bin/sh
 
-WEBP_QUALITY=85
-JPEG_QUALITY=75
-
 SCRIPT_DIR="$(dirname "$0")"
 IMAGE_PREFIX=knockside
-MASTERS="$SCRIPT_DIR/masters"
-COMPRESSED="$SCRIPT_DIR/compressed"
+OUTPUT="$SCRIPT_DIR/compressed"
+
+CAMERA="http://windowcam.local:8080/?action=snapshot"
 
 UPLOAD_BUCKET=knockside.scot
-UPLOAD_MASTERS_TARGET="s3://$UPLOAD_BUCKET/webcam/masters"
-UPLOAD_COMPRESSED_TARGET="s3://$UPLOAD_BUCKET/webcam/compressed"
+UPLOAD_TARGET="s3://$UPLOAD_BUCKET/webcam/compressed"
 
 set -e
 
@@ -19,46 +16,12 @@ now=$(date +%s)
 shoot ()
 {
     day="$(expr $now / 86400 '*' 86400)"
-    mkdir -p "$MASTERS"/"$day"
+    mkdir -p "$OUTPUT"/"$day"
 
-    ffmpeg -f v4l2 \
-           -s 1920x1080 \
-           -i /dev/video0 \
-	   -ss 00:00:04 \
-           -frames 1 \
-           -lossless 1 \
-           "$MASTERS"/"$day"/"$IMAGE_PREFIX"-$now.webp
-}
-
-compress ()
-{
-    find "$MASTERS" \
-         -type f \
-         \( -name '*.png' \
-            -o -name '*.webp' \) \
-         | while read -r master
-    do
-        basename="$(basename "$master" | sed -e 's/\..\+//')"
-        time="$(echo "$basename" | sed -e 's/^.*-//')"
-        day="$(expr $time / 86400 '*' 86400)"
-        mkdir -p "$COMPRESSED"/"$day"
-
-        if ! [ -f "$COMPRESSED"/"$day"/"$basename".webp ]
-        then
-            echo "Compressing $COMPRESSED/$day/$basename.webp..."
-            convert "$master" \
-                    -quality "$WEBP_QUALITY" \
-                    "$COMPRESSED"/"$day"/"$basename".webp
-        fi
-
-        if ! [ -f "$COMPRESSED"/"$day"/"$basename".jpg ]
-        then
-            echo "Compressing $COMPRESSED/$day/$basename.jpg..."
-            convert "$master" \
-                    -quality "$JPEG_QUALITY" \
-                    "$COMPRESSED"/"$day"/"$basename".jpg
-        fi
-    done
+    curl \
+        --no-progress-meter \
+        --output "$OUTPUT"/"$day"/"$IMAGE_PREFIX"-$now.jpg \
+        "$CAMERA"
 }
 
 generate_manifest ()
@@ -94,23 +57,14 @@ generate_manifest ()
 
 upload ()
 {
-    if [ "$1" = "masters" ]
-    then
-        source="$MASTERS"
-        target="$UPLOAD_MASTERS_TARGET"
-    else
-        source="$COMPRESSED"
-        target="$UPLOAD_COMPRESSED_TARGET"
-    fi
-
-    for day_source in "$source"/*/
+    for day_source in "$OUTPUT"/*/
     do
         day="$(basename "$day_source")"
-        echo "Synching $day_source to $target/$day..."
-        aws s3 sync "$day_source" "$target"/"$day"
+        echo "Synching $day_source to $UPLOAD_TARGET/$day..."
+        aws s3 sync "$day_source" "$UPLOAD_TARGET"/"$day"
     done
 
-    aws s3 cp "$source"/manifest.json "$target"/ --cache-control "max-age=60"
+    aws s3 cp "$OUTPUT"/manifest.json "$UPLOAD_TARGET"/ --cache-control "max-age=60"
 }
 
 main ()
@@ -121,25 +75,16 @@ main ()
         "shoot")
             shoot
             ;;
-        "compress")
-            compress
-            ;;
         "manifest")
-            generate_manifest "$MASTERS"
-            generate_manifest "$COMPRESSED"
+            generate_manifest "$OUTPUT"
             ;;
         "upload")
             upload
             ;;
-        "upload_masters")
-            upload masters
-            ;;
         esac
     else
         shoot
-        compress
-        generate_manifest "$MASTERS"
-        generate_manifest "$COMPRESSED"
+        generate_manifest "$OUTPUT"
         upload
     fi
 }

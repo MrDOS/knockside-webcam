@@ -1,7 +1,10 @@
 /* No feature flag for WebP support, and the fast/easy checking techniques
  * (e.g., https://stackoverflow.com/a/27232658/640170) don't work on Firefox,
  * so we'll do the dumb thing and sniff the user agent. */
-var DISPLAY_FORMAT = window.navigator.userAgent.toLowerCase().indexOf('safari') != -1 ? 'jpg' : 'webp';
+//var DISPLAY_FORMAT = window.navigator.userAgent.toLowerCase().indexOf('safari') != -1 ? 'jpg' : 'webp';
+/* 2025-03-25: Now capturing and uploading a single frame from the MJPG stream
+ *             without re-encoding. */
+var DISPLAY_FORMAT = 'jpg';
 
 function loadLatestWebcamImage() {
     var req = new XMLHttpRequest();
