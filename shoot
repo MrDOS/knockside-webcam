@@ -32,7 +32,7 @@ generate_manifest ()
             -o -name '*.png' \
             -o -name '*.webp' \) \
          -print0 \
-         | xargs -0 -n 1 basename \
+         | xargs -0 basename --multiple \
          | sed -e 's/^'"$IMAGE_PREFIX"'-//;s/\..\+//' \
          | sort \
          | uniq \
