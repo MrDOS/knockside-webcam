@@ -22,6 +22,11 @@ shoot ()
         --no-progress-meter \
         --output "$OUTPUT"/"$day"/"$IMAGE_PREFIX"-$now.jpg \
         "$CAMERA"
+
+    # Create a stable “most-recent output” file.
+    cp --archive \
+        "$OUTPUT"/"$day"/"$IMAGE_PREFIX"-$now.jpg \
+        "$OUTPUT"/"$IMAGE_PREFIX".jpg
 }
 
 generate_manifest ()
@@ -33,7 +38,9 @@ generate_manifest ()
             -o -name '*.webp' \) \
          -print0 \
          | xargs -0 basename --multiple \
-         | sed -e 's/^'"$IMAGE_PREFIX"'-//;s/\..\+//' \
+         | grep '\-[0-9]\+\.' \
+         | cut -d- -f2- \
+         | cut -d. -f1 \
          | sort \
          | uniq \
          | awk '
@@ -64,6 +71,7 @@ upload ()
         aws s3 sync "$day_source" "$UPLOAD_TARGET"/"$day"
     done
 
+    aws s3 cp "$OUTPUT"/"$IMAGE_PREFIX".jpg "$UPLOAD_TARGET"/ --cache-control "max-age=60"
     aws s3 cp "$OUTPUT"/manifest.json "$UPLOAD_TARGET"/ --cache-control "max-age=60"
 }
 
