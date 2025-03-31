@@ -2,6 +2,7 @@
 Description=Webcam shoot and store
 
 [Service]
+Type=oneshot
 ExecStart=/home/knockside/webcam/shoot
 
 [Install]

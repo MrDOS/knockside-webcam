@@ -3,6 +3,7 @@ Description=Webcam shoot and store timer
 
 [Timer]
 OnCalendar=*-*-* *:0/5:00
+AccuracySec=1us
 
 [Install]
 WantedBy=default.target
