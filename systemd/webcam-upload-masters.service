@@ -2,8 +2,6 @@
 Description=Webcam masters upload
 
 [Service]
-User=knockside
-Group=knockside
 ExecStart=/home/knockside/webcam/shoot upload_masters
 
 [Install]
