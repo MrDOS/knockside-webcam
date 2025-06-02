@@ -64,7 +64,17 @@ generate_manifest ()
 
 upload ()
 {
-    for day_source in "$OUTPUT"/*/
+    # We want to run as few sync operations as possible, as each one takes
+    # ~3.5s. That's not a lot in isolation, but really adds up when you have a
+    # few months of images in the output directory. Under the assumption that
+    # uploading occurs nearly as regularly as shooting, upload only the two
+    # most recent days. This will handle the rollover scenario where shooting
+    # occurs just before midnight, and uploading happens just after.
+    #
+    # TODO: Would be nice to have an “--all” flag for offline use.
+    #
+    # TODO: This requires that $OUTPUT contain no spaces, which sucks.
+    for day_source in $(ls -1 --directory --sort=time --reverse "$OUTPUT"/*/ | tail -n 2)
     do
         day="$(basename "$day_source")"
         echo "Synching $day_source to $UPLOAD_TARGET/$day..."
