@@ -1,8 +1,0 @@
-[Unit]
-Description=Webcam masters upload
-
-[Service]
-ExecStart=/home/knockside/webcam/shoot upload_masters
-
-[Install]
-WantedBy=multi-user.target

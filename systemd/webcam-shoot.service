@@ -3,7 +3,8 @@ Description=Webcam shoot and store
 
 [Service]
 Type=oneshot
-ExecStart=/home/knockside/webcam/shoot
+WorkingDirectory=/tmp
+ExecStart=/home/webcam/bin/shoot
 
 [Install]
 WantedBy=default.target

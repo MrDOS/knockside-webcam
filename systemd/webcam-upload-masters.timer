@@ -1,8 +1,0 @@
-[Unit]
-Description=Webcam masters upload timer
-
-[Timer]
-OnCalendar=*-*-* 02:00:00
-
-[Install]
-WantedBy=multi-user.target
