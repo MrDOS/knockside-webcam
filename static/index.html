@@ -40,6 +40,15 @@
             right: 1em;
         }
 
+        input#selector
+        {
+            position: absolute;
+            left: 25%;
+            right: 25%;
+            top: auto;
+            bottom: 1em;
+        }
+
         </style>
     </head>
     <body>
@@ -49,6 +58,9 @@
             and faces WSW.
         </div>
         <div id="when"></div>
+        <input id="selector" list="quarters" type="range" min="0" max="0">
+        <datalist id="quarters">
+        </datalist>
         <script src="config.js"></script>
         <script src="webcam.js"></script>
     </body>
